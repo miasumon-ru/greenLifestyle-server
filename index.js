@@ -43,6 +43,109 @@ async function run() {
         const agreementsCollection = client.db('GreenLifeStyle').collection('agreements')
         const paymentsCollection = client.db('GreenLifeStyle').collection('payments')
         const announcementsCollection = client.db('GreenLifeStyle').collection('annoncements')
+        const usersCollection = client.db('GreenLifeStyle').collection('users')
+
+
+        // users
+
+        app.post('/users', async (req, res) => {
+            const user = req.body
+
+            // checking already Exist or not
+
+            const email = user?.email
+
+            const query = {
+                email: email
+            }
+
+            const isExist = await usersCollection.findOne(query)
+
+            // do not insert the user if already exists in the database
+
+            if (isExist) {
+
+                return res.send({ message: 'Already exists in the database' })
+            }
+
+            // otherwise insert the user
+
+            const result = await usersCollection.insertOne(user)
+
+            res.send(result)
+        })
+
+        // checking role
+
+        app.get('/users/:email', async (req, res) => {
+
+            const email = req.params.email
+            console.log(email)
+
+            const query = { email: email }
+
+            const isExist = await usersCollection.findOne(query)
+
+            console.log(isExist)
+
+            if (!isExist) {
+                return
+            }
+
+            const role = isExist.role
+
+
+
+
+            //    if the role is admin
+
+            if (role === 'admin') {
+
+                const inquiry = { role: 'member' }
+
+                const members = await usersCollection.find(inquiry).toArray()
+
+                return res.send({ role, members })
+            }
+
+            res.send({ role })
+
+
+        })
+
+        // remove the membership
+
+        app.patch('/users/:email', async (req, res) => {
+
+            const email = req.params.email
+
+            const role = req.body.status
+
+            console.log('email:', email, 'role :', role)
+
+
+            // const query = { _id: new ObjectId(id) }
+            
+            const query = {
+                email : email
+            }
+
+            console.log(query)
+
+            const updateDoc = {
+                $set: {
+                    role: role
+                }
+            };
+
+            const result = await usersCollection.updateOne(query, updateDoc)
+
+
+            res.send(result)
+
+
+        })
+
 
         // get the all apartments data
 
@@ -52,10 +155,10 @@ async function run() {
             const size = parseInt(req.query.size)
 
             const result = await apartmentsCollection
-            .find()
-            .skip(page * size)
-            .limit(size)
-            .toArray()
+                .find()
+                .skip(page * size)
+                .limit(size)
+                .toArray()
 
             res.send(result)
 
@@ -102,11 +205,11 @@ async function run() {
         })
 
 
-        // get all agreements
+        // get the agreement
 
-        app.get('/agreementsAll/:email', async(req, res)=> {
-            const email  = req.params.email
-            const query = { userEmail : email}
+        app.get('/agreementsAll/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { userEmail: email }
 
             const result = await agreementsCollection.findOne(query)
 
@@ -116,82 +219,67 @@ async function run() {
 
         })
 
-            // checking role
+        // agreements all
 
-            app.get('/agreements/:email', async(req, res)=> {
+        app.get('/agreements', async (req, res) => {
 
-                const email = req.params.email
-                console.log(email)
+            const result = await agreementsCollection.find().toArray()
 
-                const query = {userEmail : email}
+            res.send(result)
 
-                const isExist = await agreementsCollection.findOne(query)
+        })
 
-                console.log(isExist)
+        // patch the agreements info
 
-                if(!isExist){
-                    return
-                }
+        app.patch('/agreements/:email', async (req, res) => {
 
-                const role = isExist.role
+            const email = req.params.email
 
+            const status = req.body.status
 
-                //    if the role is admin
-
-                if(role === 'admin'){
-
-                    const inquiry = {role :'member'}
-                    const options = {            
-                        // Include only the `title` and `imdb` fields in the returned document
-                        projection: { userEmail: 1, userName: 1},
-                      };
-                  
-                    const members = await agreementsCollection.find(inquiry, options).toArray()
-
-                   return res.send({role, members})
-                }
-
-                res.send({role})
+            console.log('email:', email, 'role :', status)
 
 
-            })
+            // const query = { _id: new ObjectId(id) }
 
-            // remove the membership
+            const query = {
+                userEmail : email
+            }
 
-           app.patch('/agreements/:id', async(req, res)=> {
-
-            const id = req.params.id
-
-            const role = req.body.status
-
-            const query = {_id : new ObjectId(id)}
+            console.log(query)
 
             const updateDoc = {
                 $set: {
-                  role : role
+                    status : status
                 }
-              };
+            };
 
-              const result = await agreementsCollection.updateOne(query, updateDoc)
-
-              res.send(result)
+            const result = await agreementsCollection.updateOne(query, updateDoc)
 
 
-           })
+            res.send(result)
+
+
+        })
+
+
+
+
+
 
         //    announcement related api
 
-        app.post('/announcements', async(req, res)=> {
-            
+        app.post('/announcements', async (req, res) => {
+
             const announcement = req.body
-            const result = await announcementsCollection.insertOne(announcement) 
+            const result = await announcementsCollection.insertOne(announcement)
 
             res.send(result)
         })
 
-        app.get('/announcements', async(req, res)=> {
-            
-            const result = await announcementsCollection.find().toArray() 
+        app.get('/announcements', async (req, res) => {
+
+            const result = await announcementsCollection.find().toArray()
 
             res.send(result)
         })
@@ -201,72 +289,72 @@ async function run() {
         app.get("/apartmentsCount", async (req, res) => {
 
             const count = await apartmentsCollection.estimatedDocumentCount()
-            res.send({count} )
+            res.send({ count })
         })
 
-         // payment intent
+        // payment intent
 
-    app.post('/create-payment-intent', async(req, res) => {
+        app.post('/create-payment-intent', async (req, res) => {
 
-        const {price} = req.body
-        const amount = parseInt(price * 100)
-  
+            const { price } = req.body
+            const amount = parseInt(price * 100)
 
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount : amount,
-          currency : 'usd',
-          payment_method_types : ['card']
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            })
+
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+
+
+
         })
-  
-  
-        res.send({
-          clientSecret: paymentIntent.client_secret
+
+        // payment save
+
+        app.post('/payments', async (req, res) => {
+
+            const payment = req.body
+
+            const paymentResult = await paymentsCollection.insertOne(payment)
+
+            // carefully delete each item from the cart
+
+            //   const query = {
+            //     _id : {
+            //       $in : payment.cartId.map(id => new ObjectId(id) )
+            //     }
+            //   }
+
+            //   const deleteResult = await cartCollection.deleteMany(query)
+
+            res.send(paymentResult)
+
+
         })
-  
-  
-         
-      })
 
-       // payment save
 
-    app.post('/payments', async(req, res)=> {
+        // get the all payments api
 
-        const payment = req.body
-  
-      const paymentResult = await paymentsCollection.insertOne(payment)
-  
-      // carefully delete each item from the cart
-  
-    //   const query = {
-    //     _id : {
-    //       $in : payment.cartId.map(id => new ObjectId(id) )
-    //     }
-    //   }
-  
-    //   const deleteResult = await cartCollection.deleteMany(query)
-  
-      res.send(paymentResult)
-  
-  
-      })
+        app.get('/payments/:email', async (req, res) => {
 
-      
-    // get the all payments api
+            const email = req.params.email
 
-    app.get('/payments/:email', async(req, res)=> {
+            const query = { email: email }
 
-        const email = req.params.email
-  
-        const query = { email : email}
-  
-        const result = await paymentsCollection.find(query).toArray()
-  
-        res.send(result)
-  
+            const result = await paymentsCollection.find(query).toArray()
 
-  
-      })
-  
+            res.send(result)
+
+
+
+        })
+
 
 
 
