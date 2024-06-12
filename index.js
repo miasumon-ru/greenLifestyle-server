@@ -42,6 +42,7 @@ async function run() {
         const apartmentsCollection = client.db('GreenLifeStyle').collection('apartments')
         const agreementsCollection = client.db('GreenLifeStyle').collection('agreements')
         const paymentsCollection = client.db('GreenLifeStyle').collection('payments')
+        const announcementsCollection = client.db('GreenLifeStyle').collection('annoncements')
 
         // get the all apartments data
 
@@ -177,6 +178,23 @@ async function run() {
 
 
            })
+
+        //    announcement related api
+
+        app.post('/announcements', async(req, res)=> {
+            
+            const announcement = req.body
+            const result = await announcementsCollection.insertOne(announcement) 
+
+            res.send(result)
+        })
+
+        app.get('/announcements', async(req, res)=> {
+            
+            const result = await announcementsCollection.find().toArray() 
+
+            res.send(result)
+        })
 
 
         // pagination related api
