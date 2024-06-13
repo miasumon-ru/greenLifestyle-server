@@ -45,12 +45,15 @@ async function run() {
         const announcementsCollection = client.db('GreenLifeStyle').collection('annoncements')
         const usersCollection = client.db('GreenLifeStyle').collection('users')
         const acceptedAgreementsCollection = client.db('GreenLifeStyle').collection('acceptedAgreements')
+        const couponsCollection = client.db('GreenLifeStyle').collection('coupons')
 
 
         // users
 
         app.post('/users', async (req, res) => {
             const user = req.body
+
+            console.log(user)
 
             // checking already Exist or not
 
@@ -62,11 +65,14 @@ async function run() {
 
             const isExist = await usersCollection.findOne(query)
 
+            console.log( 
+                "isExist ", isExist)
+
             // do not insert the user if already exists in the database
 
             if (isExist) {
 
-                return res.send({ message: 'Already exists in the database' })
+                return res.send({ message:'Already exists in the database'})
             }
 
             // otherwise insert the user
@@ -387,6 +393,27 @@ async function run() {
 
 
 
+        })
+
+        // coupon related api
+
+        app.post('/coupons', async(req, res)=> {
+
+            const couponInfo = req.body
+
+            console.log(couponInfo)
+
+            const result = await couponsCollection.insertOne(couponInfo)
+
+            res.send(result)
+
+        })
+
+        // get the all coupons 
+
+        app.get('/coupons', async(req, res)=> {
+            const result = await couponsCollection.find().toArray()
+            res.send(result)
         })
 
 
