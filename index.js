@@ -44,6 +44,7 @@ async function run() {
         const paymentsCollection = client.db('GreenLifeStyle').collection('payments')
         const announcementsCollection = client.db('GreenLifeStyle').collection('annoncements')
         const usersCollection = client.db('GreenLifeStyle').collection('users')
+        const acceptedAgreementsCollection = client.db('GreenLifeStyle').collection('acceptedAgreements')
 
 
         // users
@@ -260,6 +261,39 @@ async function run() {
             res.send(result)
 
 
+        })
+
+        // accepted agreements
+
+        app.post('/acceptedAgreements', async(req,res)=> {
+            const acceptedAgreement = req.body
+            const result = await acceptedAgreementsCollection.insertOne(acceptedAgreement)
+
+            res.send(result)
+        })
+        // accepted agreements
+
+        app.get('/acceptedAgreements/:email', async(req, res) => {
+
+            const email = req.params.email
+            const query = {userEmail : email}
+            
+            const result = await acceptedAgreementsCollection.findOne(query)
+
+            res.send(result)
+        })
+
+        // deleted the requested agreement after accepted or rejected
+
+        app.delete('/agreements/:email', async(req, res)=> {
+
+            const email = req.params.email
+            const query = {userEmail : email}
+
+            const result = await agreementsCollection.deleteOne(query)
+
+            res.send(result)
+            
         })
 
 
