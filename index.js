@@ -7,12 +7,9 @@ require('dotenv').config()
 const cors = require('cors')
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
+
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000
-
-
-
-// 2QeH9UkVq61CnU4A
-// GreenLifeStyle
 
 
 // middleware
@@ -34,6 +31,45 @@ const client = new MongoClient(uri, {
     }
 });
 
+
+
+
+// verify token
+
+const verifyToken = (req, res, next) => {
+
+    // console.log("inside verify token: ", req.headers.authorization)
+
+    if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" })
+    }
+
+    const token = req.headers.authorization.split(' ')[1]
+
+    // verify the token
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+
+        if (error) {
+            return res.status(401).send({ message: "unauthorized access" })
+        }
+
+        req.decoded = decoded
+
+        next()
+
+    })
+
+
+
+
+
+
+}
+
+
+
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -46,6 +82,17 @@ async function run() {
         const usersCollection = client.db('GreenLifeStyle').collection('users')
         const acceptedAgreementsCollection = client.db('GreenLifeStyle').collection('acceptedAgreements')
         const couponsCollection = client.db('GreenLifeStyle').collection('coupons')
+
+
+        // jwt related api
+
+        app.post('/jwt', async (req, res) => {
+            const user = req.body
+
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+
+            res.send({ token })
+        })
 
 
         // users
@@ -65,14 +112,14 @@ async function run() {
 
             const isExist = await usersCollection.findOne(query)
 
-            console.log( 
+            console.log(
                 "isExist ", isExist)
 
             // do not insert the user if already exists in the database
 
             if (isExist) {
 
-                return res.send({ message:'Already exists in the database'})
+                return res.send({ message: 'Already exists in the database' })
             }
 
             // otherwise insert the user
@@ -82,9 +129,32 @@ async function run() {
             res.send(result)
         })
 
+
+        // verifyUser
+
+        const verifyAdmin = async (req, res, next) => {
+
+            const email = req.decoded.email
+
+            const query = { email: email }
+
+            const user = await usersCollection.findOne(query)
+
+            const isAdmin = user?.role === "admin"
+
+            if (!isAdmin) {
+                return res.status(403).send({ message: "forbidden access" })
+            }
+
+            next()
+
+        }
+
+
+
         // checking role
 
-        app.get('/users/:email', async (req, res) => {
+        app.get('/users/:email', verifyToken, async (req, res) => {
 
             const email = req.params.email
             console.log(email)
@@ -123,7 +193,7 @@ async function run() {
 
         // get all users 
 
-        app.get('/users', async(req, res)=> {
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
 
             const result = await usersCollection.find().toArray()
 
@@ -135,7 +205,7 @@ async function run() {
 
         // remove the membership
 
-        app.patch('/users/:email', async (req, res) => {
+        app.patch('/users/:email', verifyToken, verifyAdmin, async (req, res) => {
 
             const email = req.params.email
 
@@ -145,9 +215,9 @@ async function run() {
 
 
             // const query = { _id: new ObjectId(id) }
-            
+
             const query = {
-                email : email
+                email: email
             }
 
             console.log(query)
@@ -250,7 +320,7 @@ async function run() {
 
         // agreements all
 
-        app.get('/agreements', async (req, res) => {
+        app.get('/agreements', verifyToken, verifyAdmin, async (req, res) => {
 
             const result = await agreementsCollection.find().toArray()
 
@@ -260,7 +330,7 @@ async function run() {
 
         // patch the agreements info
 
-        app.patch('/agreements/:email', async (req, res) => {
+        app.patch('/agreements/:email', verifyToken, verifyAdmin, async (req, res) => {
 
             const email = req.params.email
 
@@ -272,14 +342,14 @@ async function run() {
             // const query = { _id: new ObjectId(id) }
 
             const query = {
-                userEmail : email
+                userEmail: email
             }
 
             console.log(query)
 
             const updateDoc = {
                 $set: {
-                    status : status
+                    status: status
                 }
             };
 
@@ -293,7 +363,7 @@ async function run() {
 
         // accepted agreements
 
-        app.post('/acceptedAgreements', async(req,res)=> {
+        app.post('/acceptedAgreements', async (req, res) => {
             const acceptedAgreement = req.body
             const result = await acceptedAgreementsCollection.insertOne(acceptedAgreement)
 
@@ -301,18 +371,19 @@ async function run() {
         })
         // accepted agreements
 
-        app.get('/acceptedAgreements/:email', async(req, res) => {
+        app.get('/acceptedAgreements/:email', verifyToken, async (req, res) => {
 
             const email = req.params.email
-            const query = {userEmail : email}
-            
+            const query = { userEmail: email }
+
             const result = await acceptedAgreementsCollection.findOne(query)
 
             res.send(result)
         })
+
         // get the all  accepted agreements data
 
-        app.get('/acceptedAgreementsAll', async(req, res) => {
+        app.get('/acceptedAgreementsAll', verifyToken, verifyAdmin, async (req, res) => {
 
 
             const result = await acceptedAgreementsCollection.find().toArray()
@@ -325,15 +396,15 @@ async function run() {
 
         // deleted the requested agreement after accepted or rejected
 
-        app.delete('/agreements/:email', async(req, res)=> {
+        app.delete('/agreements/:email', verifyToken, verifyAdmin, async (req, res) => {
 
             const email = req.params.email
-            const query = {userEmail : email}
+            const query = { userEmail: email }
 
             const result = await agreementsCollection.deleteOne(query)
 
             res.send(result)
-            
+
         })
 
 
@@ -351,7 +422,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/announcements', async (req, res) => {
+        app.get('/announcements',  async (req, res) => {
 
             const result = await announcementsCollection.find().toArray()
 
@@ -360,7 +431,7 @@ async function run() {
 
 
         // pagination related api
-        app.get("/apartmentsCount", async (req, res) => {
+        app.get("/apartmentsCount",  async (req, res) => {
 
             const count = await apartmentsCollection.estimatedDocumentCount()
             res.send({ count })
@@ -415,7 +486,7 @@ async function run() {
 
         // get the all payments api
 
-        app.get('/payments/:email', async (req, res) => {
+        app.get('/payments/:email', verifyToken, async (req, res) => {
 
             const email = req.params.email
 
@@ -431,7 +502,7 @@ async function run() {
 
         // coupon related api
 
-        app.post('/coupons', async(req, res)=> {
+        app.post('/coupons', async (req, res) => {
 
             const couponInfo = req.body
 
@@ -445,7 +516,7 @@ async function run() {
 
         // get the all coupons 
 
-        app.get('/coupons', async(req, res)=> {
+        app.get('/coupons', async (req, res) => {
             const result = await couponsCollection.find().toArray()
             res.send(result)
         })
