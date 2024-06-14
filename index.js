@@ -120,6 +120,19 @@ async function run() {
 
         })
 
+
+        // get all users 
+
+        app.get('/users', async(req, res)=> {
+
+            const result = await usersCollection.find().toArray()
+
+            res.send(result)
+
+
+
+        })
+
         // remove the membership
 
         app.patch('/users/:email', async (req, res) => {
@@ -154,7 +167,7 @@ async function run() {
         })
 
 
-        // get the all apartments data
+        // get the some apartments data
 
         app.get('/apartments', async (req, res) => {
 
@@ -166,6 +179,15 @@ async function run() {
                 .skip(page * size)
                 .limit(size)
                 .toArray()
+
+            res.send(result)
+
+        })
+        // get the all apartments data
+
+        app.get('/apartmentsAll', async (req, res) => {
+
+            const result = await apartmentsCollection.find().toArray()
 
             res.send(result)
 
@@ -288,6 +310,18 @@ async function run() {
 
             res.send(result)
         })
+        // get the all  accepted agreements data
+
+        app.get('/acceptedAgreementsAll', async(req, res) => {
+
+
+            const result = await acceptedAgreementsCollection.find().toArray()
+
+            res.send(result)
+        })
+
+
+
 
         // deleted the requested agreement after accepted or rejected
 
