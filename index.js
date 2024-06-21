@@ -20,8 +20,9 @@ app.use(
     cors({
       origin: [
         "http://localhost:5173",
+        "http://localhost:5174",
         "https://assignment-twelve-client-e914a.web.app",
-        "https://assignment-twelve-client-e914a.firebaseapp.com/",
+        "https://assignment-twelve-client-e914a.firebaseapp.com",
       ]
     })
   );
